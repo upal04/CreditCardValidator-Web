@@ -59,7 +59,7 @@ def register(username, password):
     save_data(data)
     st.success("Registered successfully! You can now login.")
     st.session_state.page = "home"
-    return True
+    st.experimental_rerun()
 
 def login(username, password):
     data = load_data()
@@ -69,10 +69,9 @@ def login(username, password):
         st.session_state.guest = False
         st.session_state.page = "main"
         st.success(f"Logged in as {username}")
-        return True
+        st.experimental_rerun()
     else:
         st.error("Invalid username or password")
-        return False
 
 def guest_login():
     st.session_state.logged_in = True
@@ -80,6 +79,7 @@ def guest_login():
     st.session_state.username = "Guest"
     st.session_state.page = "main"
     st.success("Logged in as Guest (cards will not be saved)")
+    st.experimental_rerun()
 
 def logout():
     st.session_state.logged_in = False
@@ -87,6 +87,7 @@ def logout():
     st.session_state.guest = False
     st.session_state.page = "home"
     st.info("Logged out successfully")
+    st.experimental_rerun()
 
 def delete_account():
     if st.session_state.guest:
@@ -102,22 +103,40 @@ def delete_account():
 # -------------------- STREAMLIT CONFIG --------------------
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
 
-# -------------------- PAGE LOGIC --------------------
 # -------------------- HOME PAGE --------------------
 if st.session_state.page == "home":
     st.markdown("<h1 style='text-align:center;color:#2E86C1;'>💳 Credit Card Manager</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align:center;color:#1F618D;'>Select an option to continue</h3>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1,1,1])
-    with col1:
-        if st.button("Login", key="login_btn"):
-            st.session_state.page = "login"
-    with col2:
-        if st.button("Register", key="reg_btn"):
-            st.session_state.page = "register"
-    with col3:
-        if st.button("Guest", key="guest_btn"):
-            guest_login()
+    st.markdown("""
+        <style>
+        .big-button {
+            display:block;
+            width:60%;
+            margin:auto;
+            font-size:24px;
+            background-color:#1F618D;
+            color:white;
+            padding:15px 0px;
+            border-radius:10px;
+            margin-bottom:15px;
+            text-align:center;
+        }
+        .big-button:hover {
+            background-color:#2874A6;
+            color:white;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    if st.button("Login", key="login_btn"):
+        st.session_state.page = "login"
+        st.experimental_rerun()
+    if st.button("Register", key="reg_btn"):
+        st.session_state.page = "register"
+        st.experimental_rerun()
+    if st.button("Guest", key="guest_btn"):
+        guest_login()
 
 # -------------------- LOGIN PAGE --------------------
 elif st.session_state.page == "login":
@@ -131,6 +150,7 @@ elif st.session_state.page == "login":
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
+            st.experimental_rerun()
 
 # -------------------- REGISTER PAGE --------------------
 elif st.session_state.page == "register":
@@ -144,6 +164,7 @@ elif st.session_state.page == "register":
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
+            st.experimental_rerun()
 
 # -------------------- MAIN PAGE --------------------
 elif st.session_state.page == "main":
