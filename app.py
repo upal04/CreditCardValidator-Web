@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import os
 
-# -------------------- JSON DATA --------------------
+# -------------------- DATA FILE --------------------
 DATA_FILE = "data.json"
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, "w") as f:
@@ -41,61 +41,18 @@ def get_card_type(number):
         return "Unknown"
 
 # -------------------- SESSION STATE --------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "guest" not in st.session_state:
-    st.session_state.guest = False
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+for key in ["logged_in", "username", "guest", "page"]:
+    if key not in st.session_state:
+        st.session_state[key] = False if key=="logged_in" or key=="guest" else ""
 
-# -------------------- AUTH FUNCTIONS --------------------
-def register_user(username, password):
-    data = load_data()
-    if username in data["users"]:
-        st.error("Username already exists!")
-        return
-    data["users"][username] = {"password": password, "cards": []}
-    save_data(data)
-    st.success("Registered successfully! You can now login.")
+if "action_flag" not in st.session_state:
+    st.session_state.action_flag = False
 
-def login_user(username, password):
-    data = load_data()
-    if username in data["users"] and data["users"][username]["password"] == password:
-        st.session_state.logged_in = True
-        st.session_state.username = username
-        st.session_state.guest = False
-        st.session_state.page = "main"
-        st.success(f"Logged in as {username}")
-        st.experimental_rerun()
-    else:
-        st.error("Invalid username or password")
-
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.guest = False
-    st.session_state.page = "home"
-    st.info("Logged out successfully")
-    st.experimental_rerun()
-
-def delete_account():
-    if st.session_state.guest:
-        st.warning("Guest account cannot be deleted.")
-        return
-    data = load_data()
-    if st.session_state.username in data["users"]:
-        del data["users"][st.session_state.username]
-        save_data(data)
-        st.success("Your account has been deleted.")
-        logout()
-
-# -------------------- STREAMLIT CONFIG --------------------
+# -------------------- APP CONFIG --------------------
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
 
 # -------------------- HOME PAGE --------------------
-if st.session_state.page == "home":
+if st.session_state.page == "" or st.session_state.page == "home":
     st.markdown("<h1 style='text-align:center;color:#2E86C1;'>💳 Credit Card Manager</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align:center;color:#1F618D;'>Select an option to continue</h3>", unsafe_allow_html=True)
 
@@ -114,7 +71,6 @@ if st.session_state.page == "home":
             st.session_state.guest = True
             st.session_state.username = "Guest"
             st.session_state.page = "main"
-            st.success("Logged in as Guest (cards will not be saved)")
             st.experimental_rerun()
 
 # -------------------- LOGIN PAGE --------------------
@@ -125,7 +81,16 @@ elif st.session_state.page == "login":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Login"):
-            login_user(username, password)
+            data = load_data()
+            if username in data["users"] and data["users"][username]["password"] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.session_state.guest = False
+                st.session_state.page = "main"
+                st.success(f"Logged in as {username}")
+                st.experimental_rerun()
+            else:
+                st.error("Invalid username or password")
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
@@ -139,7 +104,15 @@ elif st.session_state.page == "register":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Register"):
-            register_user(username, password)
+            data = load_data()
+            if not username or not password:
+                st.error("Enter both username and password")
+            elif username in data["users"]:
+                st.error("Username already exists")
+            else:
+                data["users"][username] = {"password": password, "cards": []}
+                save_data(data)
+                st.success("Registered successfully! Please login.")
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
@@ -149,7 +122,11 @@ elif st.session_state.page == "register":
 elif st.session_state.page == "main":
     st.sidebar.write(f"👤 User: {st.session_state.username}")
     if st.sidebar.button("Logout"):
-        logout()
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.guest = False
+        st.session_state.page = "home"
+        st.experimental_rerun()
 
     data = load_data()
     if not st.session_state.guest:
@@ -166,11 +143,8 @@ elif st.session_state.page == "main":
         if len(user_cards) == 0:
             st.info("No cards saved yet. Please add a new credit card.")
         else:
-            cols = st.columns(2)
-            for idx, card in enumerate(user_cards):
-                col = cols[idx % 2]
-                with col:
-                    st.markdown(f"""
+            for card in user_cards:
+                st.markdown(f"""
                     <div style='background-color:#D6EAF8; padding:15px; border-radius:10px; margin-bottom:10px;'>
                         <h4>{card['owner_name']}</h4>
                         <p>**** **** **** {card['number'][-4:]}</p>
@@ -178,27 +152,27 @@ elif st.session_state.page == "main":
                         <p>Type: {get_card_type(card['number'])}</p>
                         <p>Luhn: {"✅ Valid" if luhn_check(card['number']) else "❌ Invalid"}</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
     # -------------------- ADD NEW CREDIT CARD --------------------
     elif choice == "Add New Credit Card":
         st.subheader("Add a New Credit Card")
-        owner_name = st.text_input("Owner Name / Card Nickname")
+        owner_name = st.text_input("Owner Name / Nickname")
         card_number = st.text_input("Card Number").replace(" ","").replace("-","")
         month = st.text_input("Expiration Month (MM)")
         year = st.text_input("Expiration Year (YYYY)")
         cvv = st.text_input("CVV", type="password")
         if st.button("Add Card"):
             if not owner_name:
-                st.error("Please enter Owner Name / Nickname")
+                st.error("Enter Owner Name / Nickname")
             elif not (card_number.isdigit() and len(card_number) in [13,15,16]):
-                st.error("Invalid card number format")
+                st.error("Invalid card number")
             elif not luhn_check(card_number):
                 st.error("Invalid card number (failed Luhn check)")
-            elif not (month.isdigit() and 1<=int(month)<=12):
-                st.error("Invalid expiration month")
+            elif not (month.isdigit() and 1 <= int(month) <= 12):
+                st.error("Invalid month")
             elif not (year.isdigit() and len(year)==4):
-                st.error("Invalid expiration year")
+                st.error("Invalid year")
             elif not (cvv.isdigit() and len(cvv) in [3,4]):
                 st.error("Invalid CVV")
             else:
@@ -230,7 +204,7 @@ elif st.session_state.page == "main":
                     save_data(data)
                     st.success("Card deleted successfully!")
                 else:
-                    st.info("Guest mode: no cards saved, nothing to delete.")
+                    st.info("Guest mode: nothing to delete.")
 
     # -------------------- DELETE ACCOUNT --------------------
     elif choice == "Delete Account":
@@ -239,4 +213,13 @@ elif st.session_state.page == "main":
             st.info("Guest account cannot be deleted.")
         else:
             if st.button("Delete Account"):
-                delete_account()
+                if st.session_state.username in data["users"]:
+                    del data["users"][st.session_state.username]
+                    save_data(data)
+                    st.success("Your account has been deleted.")
+                    # Logout after deletion
+                    st.session_state.logged_in = False
+                    st.session_state.username = ""
+                    st.session_state.guest = False
+                    st.session_state.page = "home"
+                    st.experimental_rerun()
