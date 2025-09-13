@@ -178,8 +178,3 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
-
-
-
-
-
