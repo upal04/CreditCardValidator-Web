@@ -101,7 +101,7 @@ else:
     if menu == "Add Card":
         st.subheader("➕ Add a New Card")
         holder = st.text_input("Cardholder Name")
-        number = st.text_input("Card Number (16 digits)")
+        number = st.text_input("Card Number ").replace(" ", "").replace("-", "")
         expiry = st.text_input("Expiry (MM/YY)")
         cvv = st.text_input("CVV", type="password")
 
@@ -174,3 +174,4 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
+
