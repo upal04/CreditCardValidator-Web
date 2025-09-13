@@ -142,7 +142,6 @@ if not st.session_state.logged_in:
                 st.session_state.username = li_user
                 st.session_state.guest = False
                 st.sidebar.success(f"Logged in as {li_user}")
-                st.experimental_rerun()
             else:
                 st.sidebar.error("Invalid credentials.")
     elif auth_choice == "Register":
@@ -345,5 +344,6 @@ st.markdown(
     "It is <b>not</b> suitable for storing real card data in production. For production use, implement secure authentication, encrypt stored data, "
     "and follow PCI guidelines.</small>", unsafe_allow_html=True
 )
+
 
 
