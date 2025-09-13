@@ -166,7 +166,6 @@ if not st.session_state.logged_in:
             st.session_state.guest = True
             st.session_state.guest_cards = []
             st.sidebar.info("Guest mode: cards are local to this browser session and will not be saved persistently.")
-            st.experimental_rerun()
 else:
     st.sidebar.write(f"Logged in as: **{st.session_state.username}**")
     if st.sidebar.button("Logout"):
@@ -347,3 +346,4 @@ st.markdown(
     "It is <b>not</b> suitable for storing real card data in production. For production use, implement secure authentication, encrypt stored data, "
     "and follow PCI guidelines.</small>", unsafe_allow_html=True
 )
+
