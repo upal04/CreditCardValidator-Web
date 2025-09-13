@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import os
 
-# -------------------- File Path --------------------
 USER_DATA_FILE = "users.json"
 
 # -------------------- Helper Functions --------------------
@@ -17,7 +16,6 @@ def save_users(users):
         json.dump(users, f, indent=4)
 
 def validate_card_number(card_number: str) -> bool:
-    """Check if a card number is valid using Luhn Algorithm"""
     digits = [int(d) for d in card_number if d.isdigit()]
     checksum = 0
     reverse_digits = digits[::-1]
@@ -30,7 +28,7 @@ def validate_card_number(card_number: str) -> bool:
     return checksum % 10 == 0
 
 # -------------------- Streamlit App --------------------
-st.title("💳 Card Manager App")
+st.title("💳 Credit Card Manager")
 
 users = load_users()
 
@@ -44,39 +42,65 @@ if not st.session_state.logged_in and not st.session_state.guest:
     option = st.radio("Choose an option:", ["Login", "Register", "Continue as Guest"])
 
     if option == "Login":
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if username in users and users[username]["password"] == password:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success(f"Welcome back, {username}!")
-            else:
-                st.error("Invalid username or password.")
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            login_btn = st.form_submit_button("Login")
+            if login_btn:
+                if username in users and users[username]["password"] == password:
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.success(f"Welcome back, {username}!")
+                else:
+                    st.error("Invalid username or password.")
 
     elif option == "Register":
-        username = st.text_input("Choose Username")
-        password = st.text_input("Choose Password", type="password")
-        if st.button("Register"):
-            if not username or not password:
-                st.warning("⚠️ Username and Password cannot be empty.")
-            elif username in users:
-                st.warning("Username already exists.")
-            else:
-                users[username] = {"password": password, "cards": []}
-                save_users(users)
-                st.success("Account created successfully! Please login.")
+        with st.form("register_form"):
+            username = st.text_input("Choose Username")
+            password = st.text_input("Choose Password", type="password")
+            register_btn = st.form_submit_button("Register")
+            if register_btn:
+                if not username or not password:
+                    st.warning("⚠️ Username and Password cannot be empty.")
+                elif username in users:
+                    st.warning("Username already exists.")
+                else:
+                    users[username] = {"password": password, "cards": []}
+                    save_users(users)
+                    st.success("Account created successfully! Please login.")
 
     elif option == "Continue as Guest":
         st.session_state.guest = True
-        st.success("You are using Guest mode. 🚫 Cards cannot be saved.")
+        st.success("Guest mode enabled. Data won’t be saved.")
 
 # -------------------- Guest Mode --------------------
 elif st.session_state.guest:
-    st.header("Guest Mode (Read-Only)")
-    st.info("Guests cannot save or view cards. Please register or login.")
-    if st.button("🔙 Logout"):
+    st.sidebar.title("👋 Guest Mode")
+    menu = st.sidebar.radio("Menu", ["Validate a Card", "Logout"])
+
+    if menu == "Validate a Card":
+        st.subheader("🔎 Validate Card (Guest Mode)")
+        with st.form("guest_card_form"):
+            card_number = st.text_input("Card Number")
+            expiry_date = st.text_input("Expiry Date (MM/YY)")
+            cvv = st.text_input("CVV", type="password")
+            holder = st.text_input("Cardholder Name")
+            submit_btn = st.form_submit_button("Check Card")
+            if submit_btn:
+                if not card_number or not expiry_date or not cvv or not holder:
+                    st.warning("⚠️ All fields are required.")
+                else:
+                    valid_status = "✅ Valid" if validate_card_number(card_number) else "❌ Invalid"
+                    st.success("Card Checked (not saved):")
+                    st.write(f"**Cardholder:** {holder}")
+                    st.write(f"**Number:** {card_number}")
+                    st.write(f"**Expiry:** {expiry_date}")
+                    st.write(f"**CVV:** {cvv}")
+                    st.write(f"**Status:** {valid_status}")
+
+    elif menu == "Logout":
         st.session_state.guest = False
+        st.success("Logged out from Guest mode.")
 
 # -------------------- Logged-In Users --------------------
 elif st.session_state.logged_in:
@@ -86,26 +110,27 @@ elif st.session_state.logged_in:
     # Add New Card
     if menu == "Add New Card":
         st.subheader("➕ Add New Card")
-        card_number = st.text_input("Card Number")
-        expiry_date = st.text_input("Expiry Date (MM/YY)")
-        cvv = st.text_input("CVV", type="password")
-        holder = st.text_input("Cardholder Name")
-
-        if st.button("Save Card"):
-            if not card_number or not expiry_date or not cvv or not holder:
-                st.warning("⚠️ All fields are required.")
-            else:
-                valid_status = "✅ Valid" if validate_card_number(card_number) else "❌ Invalid"
-                card = {
-                    "number": card_number,
-                    "expiry": expiry_date,
-                    "cvv": cvv,
-                    "holder": holder,
-                    "status": valid_status
-                }
-                users[st.session_state.username]["cards"].append(card)
-                save_users(users)
-                st.success("Card saved successfully!")
+        with st.form("add_card_form"):
+            card_number = st.text_input("Card Number")
+            expiry_date = st.text_input("Expiry Date (MM/YY)")
+            cvv = st.text_input("CVV", type="password")
+            holder = st.text_input("Cardholder Name")
+            save_btn = st.form_submit_button("Save Card")
+            if save_btn:
+                if not card_number or not expiry_date or not cvv or not holder:
+                    st.warning("⚠️ All fields are required.")
+                else:
+                    valid_status = "✅ Valid" if validate_card_number(card_number) else "❌ Invalid"
+                    card = {
+                        "number": card_number,
+                        "expiry": expiry_date,
+                        "cvv": cvv,
+                        "holder": holder,
+                        "status": valid_status
+                    }
+                    users[st.session_state.username]["cards"].append(card)
+                    save_users(users)
+                    st.success("Card saved successfully!")
 
     # View Cards
     elif menu == "View Cards":
