@@ -124,7 +124,6 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.username = None
     st.session_state.guest = False
-    st.experimental_rerun()
 
 # ---------------- UI ----------------
 st.set_page_config(page_title="Credit Card Manager (Multi-user)", layout="centered")
@@ -346,4 +345,5 @@ st.markdown(
     "It is <b>not</b> suitable for storing real card data in production. For production use, implement secure authentication, encrypt stored data, "
     "and follow PCI guidelines.</small>", unsafe_allow_html=True
 )
+
 
