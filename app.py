@@ -47,7 +47,7 @@ if "logged_in" not in st.session_state:
 if "guest" not in st.session_state:
     st.session_state.guest = False
 if "page" not in st.session_state:
-    st.session_state.page = "home"  # home/login/register/guest/main
+    st.session_state.page = "home"
 
 # -------------------- AUTH FUNCTIONS --------------------
 def register(username, password):
@@ -103,10 +103,11 @@ def delete_account():
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
 
 # -------------------- PAGE LOGIC --------------------
-# Home Page
+# -------------------- HOME PAGE --------------------
 if st.session_state.page == "home":
     st.markdown("<h1 style='text-align:center;color:#2E86C1;'>💳 Credit Card Manager</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align:center;color:#1F618D;'>Select an option to continue</h3>", unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1,1,1])
     with col1:
         if st.button("Login", key="login_btn"):
@@ -118,7 +119,7 @@ if st.session_state.page == "home":
         if st.button("Guest", key="guest_btn"):
             guest_login()
 
-# Login Page
+# -------------------- LOGIN PAGE --------------------
 elif st.session_state.page == "login":
     st.subheader("Login")
     username = st.text_input("Username", key="login_user")
@@ -131,7 +132,7 @@ elif st.session_state.page == "login":
         if st.button("Back"):
             st.session_state.page = "home"
 
-# Register Page
+# -------------------- REGISTER PAGE --------------------
 elif st.session_state.page == "register":
     st.subheader("Register")
     username = st.text_input("New Username", key="reg_user")
@@ -144,13 +145,13 @@ elif st.session_state.page == "register":
         if st.button("Back"):
             st.session_state.page = "home"
 
-# Main Page
+# -------------------- MAIN PAGE --------------------
 elif st.session_state.page == "main":
     st.sidebar.write(f"👤 User: {st.session_state.username}")
     if st.sidebar.button("Logout"):
         logout()
     
-    # Load user cards safely
+    # Load user cards
     data = load_data()
     if not st.session_state.guest:
         user_data = data["users"].get(st.session_state.username, {})
@@ -158,7 +159,7 @@ elif st.session_state.page == "main":
     else:
         user_cards = []
 
-    # Menu
+    # Menu options
     menu = ["Your Credit Cards", "Add New Credit Card", "Delete Credit Card", "Delete Account"]
     choice = st.selectbox("Select Option", menu)
 
@@ -228,4 +229,17 @@ elif st.session_state.page == "main":
             if st.button("Delete Card"):
                 if not st.session_state.guest:
                     idx = options.index(to_delete)
-                    del data["users"][st.session_state.username]["cards"][
+                    del data["users"][st.session_state.username]["cards"][idx]
+                    save_data(data)
+                    st.success("Card deleted successfully!")
+                else:
+                    st.info("Guest mode: no cards saved, nothing to delete.")
+
+    # -------------------- DELETE ACCOUNT --------------------
+    elif choice == "Delete Account":
+        st.subheader("Delete Your Account")
+        if st.session_state.guest:
+            st.info("Guest account cannot be deleted.")
+        else:
+            if st.button("Delete Account"):
+                delete_account()
