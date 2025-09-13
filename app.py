@@ -145,9 +145,9 @@ else:
                         if st.button("Show Full Details", key=f"details_{card['id']}"):
                             st.info(
                                 f"Holder: {card['holder']}\n"
-                                f"Number: {format_number(card['number'])}\n"
-                                f"Expiry: {card['expiry']}\n"
-                                f"CVV: {card['cvv']}"
+                                f"\nNumber: {format_number(card['number'])}\n"
+                                f"\nExpiry: {card['expiry']}\n"
+                                f"\nCVV: {card['cvv']}"
                             )
 
                     with col2:
@@ -178,5 +178,6 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
+
 
 
