@@ -71,7 +71,6 @@ if st.session_state.page == "" or st.session_state.page == "home":
             st.session_state.guest = True
             st.session_state.username = "Guest"
             st.session_state.page = "main"
-            st.experimental_rerun()
 
 # -------------------- LOGIN PAGE --------------------
 elif st.session_state.page == "login":
@@ -126,7 +125,6 @@ elif st.session_state.page == "main":
         st.session_state.username = ""
         st.session_state.guest = False
         st.session_state.page = "home"
-        st.experimental_rerun()
 
     data = load_data()
     if not st.session_state.guest:
@@ -223,3 +221,4 @@ elif st.session_state.page == "main":
                     st.session_state.guest = False
                     st.session_state.page = "home"
                     st.experimental_rerun()
+
