@@ -69,7 +69,7 @@ st.markdown('<div class="title">💳 Credit Card Validator</div>', unsafe_allow_
 st.markdown("### Please enter your credit card details below")
 
 # ---------------- Input Fields ---------------- #
-card_number = st.text_input("Credit Card Number (no spaces or dashes)").replace(" ", "").replace("-", "")
+card_number = st.text_input("Credit Card Number").replace(" ", "").replace("-", "")
 month = st.text_input("Expiration Month (MM)")
 year = st.text_input("Expiration Year (YYYY)")
 cvv = st.text_input("CVV", type="password")
@@ -95,3 +95,4 @@ if st.button("✅ Validate Card"):
             st.warning("❌ Invalid Credit Card. Your card has expired!")
         else:
             st.success(f"✅ Your Credit Card is valid!\n\n💳 **Type:** {get_card_type(card_number)}")
+
