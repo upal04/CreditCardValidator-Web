@@ -72,14 +72,6 @@ def login_user(username, password):
     else:
         st.error("Invalid username or password")
 
-def guest_login():
-    st.session_state.logged_in = True
-    st.session_state.guest = True
-    st.session_state.username = "Guest"
-    st.session_state.page = "main"
-    st.success("Logged in as Guest (cards will not be saved)")
-    st.experimental_rerun()
-
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
@@ -118,7 +110,12 @@ if st.session_state.page == "home":
             st.experimental_rerun()
     with col3:
         if st.button("Guest"):
-            guest_login()
+            st.session_state.logged_in = True
+            st.session_state.guest = True
+            st.session_state.username = "Guest"
+            st.session_state.page = "main"
+            st.success("Logged in as Guest (cards will not be saved)")
+            st.experimental_rerun()
 
 # -------------------- LOGIN PAGE --------------------
 elif st.session_state.page == "login":
@@ -153,7 +150,7 @@ elif st.session_state.page == "main":
     st.sidebar.write(f"👤 User: {st.session_state.username}")
     if st.sidebar.button("Logout"):
         logout()
-    
+
     data = load_data()
     if not st.session_state.guest:
         user_cards = data["users"].get(st.session_state.username, {}).get("cards", [])
