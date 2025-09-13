@@ -37,7 +37,7 @@ st.title("💳 Credit Card Validator")
 
 st.markdown("### Enter your card details to check validity")
 
-card_number = st.text_input("Credit Card Number")
+card_number = st.text_input("Credit Card Number").replace(" ", "").replace("-", "")
 month = st.text_input("Expiration Month (MM)")
 year = st.text_input("Expiration Year (YYYY)")
 cvv = st.text_input("CVV", type="password")
@@ -62,3 +62,4 @@ if st.button("✅ Validate Card"):
             st.warning("❌ Card has expired.")
         else:
             st.success(f"✅ Card is valid!\n**Type:** {get_card_type(card_number)}")
+
