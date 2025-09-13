@@ -1,167 +1,150 @@
 import streamlit as st
-import json
-import os
-from datetime import datetime
+import datetime
 
-# ---------------- Database Helpers ----------------
-DB_FILE = "users.json"
+# ------------------------------
+# Helper Functions
+# ------------------------------
 
-def load_data():
-    if not os.path.exists(DB_FILE):
-        return {}
-    with open(DB_FILE, "r") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DB_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-# ---------------- Card Validation ----------------
 def validate_card(number, expiry):
-    # Check expiry
+    """Check if card is valid based on expiry date."""
     try:
-        exp_month, exp_year = map(int, expiry.split("/"))
-        now = datetime.now()
-        if exp_year < now.year or (exp_year == now.year and exp_month < now.month):
-            return False
+        exp_month, exp_year = expiry.split("/")
+        exp_month, exp_year = int(exp_month), int(exp_year)
+
+        today = datetime.date.today()
+        # Expiry means the last day of the month
+        expiry_date = datetime.date(2000 + exp_year, exp_month, 1) + datetime.timedelta(days=31)
+        expiry_date = expiry_date.replace(day=1) - datetime.timedelta(days=1)
+
+        return today <= expiry_date
     except:
         return False
-    # Check length of card number
-    return len(number.replace(" ", "")) in [13, 15, 16]
 
-# ---------------- Session ----------------
-if "user" not in st.session_state:
-    st.session_state.user = None
-if "page" not in st.session_state:
-    st.session_state.page = "login"
+# ------------------------------
+# Session State Initialization
+# ------------------------------
 
-data = load_data()
+if "users" not in st.session_state:
+    st.session_state["users"] = {}  # {username: {"password": str, "cards": list}}
 
-# ---------------- Auth Pages ----------------
-def login():
-    st.title("🔐 Login")
+if "current_user" not in st.session_state:
+    st.session_state["current_user"] = None
+
+# ------------------------------
+# Authentication
+# ------------------------------
+
+def login(username, password):
+    users = st.session_state["users"]
+    if username in users and users[username]["password"] == password:
+        st.session_state["current_user"] = username
+        return True
+    return False
+
+def register(username, password):
+    users = st.session_state["users"]
+    if username not in users:
+        users[username] = {"password": password, "cards": []}
+        return True
+    return False
+
+# ------------------------------
+# Main App
+# ------------------------------
+
+st.set_page_config(page_title="Card Manager", layout="centered")
+
+st.title("💳 Simple Card Manager")
+
+# If no user is logged in → show login/register
+if not st.session_state["current_user"]:
+    option = st.radio("Choose Action:", ["Login", "Register"])
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username in data and data[username]["password"] == password:
-            st.session_state.user = username
-            st.session_state.page = "dashboard"
-            st.success("Login successful ✅")
-        else:
-            st.error("Invalid username or password!")
 
-def register():
-    st.title("📝 Register")
-    username = st.text_input("Choose a username")
-    password = st.text_input("Choose a password", type="password")
-    confirm = st.text_input("Confirm password", type="password")
-    if st.button("Register"):
-        if not username or not password:
-            st.error("Username and password cannot be empty!")
-        elif password != confirm:
-            st.error("Passwords do not match!")
-        elif username in data:
-            st.error("Username already exists!")
-        else:
-            data[username] = {"password": password, "cards": []}
-            save_data(data)
-            st.success("Account created successfully! Please login.")
-            st.session_state.page = "login"
+    if option == "Login":
+        if st.button("Login"):
+            if login(username, password):
+                st.success(f"Welcome back, {username}!")
+            else:
+                st.error("Invalid username or password.")
+    else:
+        if st.button("Register"):
+            if username.strip() == "" or password.strip() == "":
+                st.warning("Username and password cannot be empty!")
+            elif register(username, password):
+                st.success("Account created successfully! Please log in.")
+            else:
+                st.error("Username already exists. Try another one.")
 
-# ---------------- Dashboard ----------------
-def dashboard():
-    st.sidebar.title(f"👋 Hello, {st.session_state.user}")
-    menu = st.sidebar.radio("Menu", ["Add New Card", "View Cards", "Delete Card", "Delete Account", "Logout"])
+else:
+    # User dashboard
+    user = st.session_state["current_user"]
+    st.sidebar.success(f"Logged in as {user}")
+    if st.sidebar.button("Logout"):
+        st.session_state["current_user"] = None
+        st.rerun()
 
-    user_cards = data[st.session_state.user]["cards"]
+    menu = st.sidebar.radio("Menu", ["Add Card", "View Cards"])
 
-    if menu == "Add New Card":
-        st.title("➕ Add New Card")
+    # ------------------ Add Card ------------------
+    if menu == "Add Card":
+        st.subheader("➕ Add a New Card")
+
         holder = st.text_input("Cardholder Name")
-        number = st.text_input("Card Number (digits only)")
-        expiry = st.text_input("Expiry (MM/YYYY)")
+        number = st.text_input("Card Number (16 digits)")
+        expiry = st.text_input("Expiry Date (MM/YY)")
         cvv = st.text_input("CVV", type="password")
 
         if st.button("Save Card"):
-            if holder and number and expiry and cvv:
-                data[st.session_state.user]["cards"].append({
-                    "holder": holder,
-                    "number": number,
-                    "expiry": expiry,
-                    "cvv": cvv
-                })
-                save_data(data)
-                st.success("Card saved successfully!")
+            if not (holder and number and expiry and cvv):
+                st.warning("All fields are required!")
+            elif not number.isdigit() or len(number) != 16:
+                st.error("Card number must be 16 digits.")
+            elif not cvv.isdigit() or len(cvv) != 3:
+                st.error("CVV must be 3 digits.")
             else:
-                st.error("All fields are required!")
+                card = {"holder": holder, "number": number, "expiry": expiry, "cvv": cvv}
+                st.session_state["users"][user]["cards"].append(card)
+                st.success("Card saved successfully!")
 
+    # ------------------ View Cards ------------------
     elif menu == "View Cards":
-        st.title("💳 Your Cards")
-        if not user_cards:
+        st.subheader("📂 Your Saved Cards")
+        cards = st.session_state["users"][user]["cards"]
+
+        if not cards:
             st.info("No cards saved yet.")
         else:
-            for i, card in enumerate(user_cards, 1):
-                st.subheader(f"Card {i}")
+            for i, card in enumerate(cards, 1):
+                st.write(f"### Card {i}")
                 st.write(f"**Cardholder:** {card['holder']}")
                 st.write(f"**Number:** **** **** **** {card['number'][-4:]}")
                 st.write(f"**Expiry:** {card['expiry']}")
 
-                col1, col2 = st.columns(2)
+                # Buttons with unique keys
+                col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button(f"Show Full Details {i}"):
+                    if st.button("Show Full Details", key=f"details_{i}"):
                         st.info(f"""
                         **Cardholder:** {card['holder']}  
                         **Number:** {card['number']}  
                         **Expiry:** {card['expiry']}  
                         **CVV:** {card['cvv']}  
                         """)
+
                 with col2:
-                    if st.button(f"Check Validity {i}"):
+                    if st.button("Check Validity", key=f"validity_{i}"):
                         if validate_card(card['number'], card['expiry']):
                             st.success("✅ Card is Valid")
                         else:
                             st.error("❌ Card is Expired / Invalid")
 
+                with col3:
+                    if st.button("Delete Card", key=f"delete_{i}"):
+                        cards.pop(i - 1)
+                        st.warning("Card deleted!")
+                        st.rerun()
+
                 st.markdown("---")
-
-    elif menu == "Delete Card":
-        st.title("🗑️ Delete Card")
-        if not user_cards:
-            st.info("No cards available to delete.")
-        else:
-            choice = st.selectbox("Select card to delete", [f"Card {i+1}" for i in range(len(user_cards))])
-            if st.button("Delete"):
-                idx = int(choice.split()[1]) - 1
-                user_cards.pop(idx)
-                save_data(data)
-                st.success("Card deleted successfully!")
-
-    elif menu == "Delete Account":
-        st.title("⚠️ Delete Account")
-        if st.button("Delete My Account"):
-            del data[st.session_state.user]
-            save_data(data)
-            st.session_state.user = None
-            st.session_state.page = "login"
-            st.success("Account deleted successfully!")
-
-    elif menu == "Logout":
-        st.session_state.user = None
-        st.session_state.page = "login"
-        st.success("Logged out successfully!")
-
-# ---------------- Router ----------------
-if st.session_state.page == "login":
-    login()
-elif st.session_state.page == "register":
-    register()
-elif st.session_state.page == "dashboard":
-    dashboard()
-
-# ---------------- Navigation ----------------
-if st.session_state.page == "login":
-    if st.button("New user? Register here"):
-        st.session_state.page = "register"
-elif st.session_state.page == "register":
-    if st.button("Already have an account? Login here"):
-        st.session_state.page = "login"
