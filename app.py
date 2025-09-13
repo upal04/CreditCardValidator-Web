@@ -155,7 +155,7 @@ else:
                             if validate_card(card["expiry"]):
                                 st.success("✅ Card is Valid")
                             else:
-                                st.error("❌ Card is Expired")
+                                st.error("❌ Invalid Card. Your Credit Card is Expired!")
 
                     with col3:
                         if st.button("Delete Card", key=f"delete_{card['id']}"):
@@ -178,6 +178,7 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
+
 
 
 
