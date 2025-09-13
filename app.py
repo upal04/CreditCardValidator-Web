@@ -3,6 +3,10 @@ import streamlit as st
 import datetime
 import uuid
 
+def format_number(number):
+    """Format card number in XXXX XXXX XXXX XXXX style"""
+    return " ".join([number[i:i+4] for i in range(0, len(number), 4)])
+
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
 
 # -------------------------
@@ -141,7 +145,7 @@ else:
                         if st.button("Show Full Details", key=f"details_{card['id']}"):
                             st.info(
                                 f"Holder: {card['holder']}\n"
-                                f"Number: {card['number']}\n"
+                                f"Number: {format_number(card['number'])}\n"
                                 f"Expiry: {card['expiry']}\n"
                                 f"CVV: {card['cvv']}"
                             )
@@ -174,4 +178,5 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
+
 
