@@ -88,23 +88,34 @@ def logout():
     st.session_state.page = "home"
     st.info("Logged out successfully")
 
+def delete_account():
+    if st.session_state.guest:
+        st.warning("Guest account cannot be deleted.")
+        return
+    data = load_data()
+    if st.session_state.username in data["users"]:
+        del data["users"][st.session_state.username]
+        save_data(data)
+        st.success("Your account has been deleted.")
+        logout()
+
 # -------------------- STREAMLIT CONFIG --------------------
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
-st.title("💳 Credit Card Manager")
 
 # -------------------- PAGE LOGIC --------------------
 # Home Page
 if st.session_state.page == "home":
-    st.subheader("Welcome! Please choose an option:")
-    col1, col2, col3 = st.columns(3)
+    st.markdown("<h1 style='text-align:center;color:#2E86C1;'>💳 Credit Card Manager</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align:center;color:#1F618D;'>Select an option to continue</h3>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,1,1])
     with col1:
-        if st.button("Login"):
+        if st.button("Login", key="login_btn"):
             st.session_state.page = "login"
     with col2:
-        if st.button("Register"):
+        if st.button("Register", key="reg_btn"):
             st.session_state.page = "register"
     with col3:
-        if st.button("Guest"):
+        if st.button("Guest", key="guest_btn"):
             guest_login()
 
 # Login Page
@@ -112,22 +123,28 @@ elif st.session_state.page == "login":
     st.subheader("Login")
     username = st.text_input("Username", key="login_user")
     password = st.text_input("Password", type="password", key="login_pass")
-    if st.button("Login"):
-        login(username, password)
-    if st.button("Back"):
-        st.session_state.page = "home"
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Login"):
+            login(username, password)
+    with col2:
+        if st.button("Back"):
+            st.session_state.page = "home"
 
 # Register Page
 elif st.session_state.page == "register":
     st.subheader("Register")
     username = st.text_input("New Username", key="reg_user")
     password = st.text_input("New Password", type="password", key="reg_pass")
-    if st.button("Register"):
-        register(username, password)
-    if st.button("Back"):
-        st.session_state.page = "home"
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Register"):
+            register(username, password)
+    with col2:
+        if st.button("Back"):
+            st.session_state.page = "home"
 
-# Main App Page
+# Main Page
 elif st.session_state.page == "main":
     st.sidebar.write(f"👤 User: {st.session_state.username}")
     if st.sidebar.button("Logout"):
@@ -142,7 +159,7 @@ elif st.session_state.page == "main":
         user_cards = []
 
     # Menu
-    menu = ["Your Credit Cards", "Add New Credit Card", "Delete Credit Card"]
+    menu = ["Your Credit Cards", "Add New Credit Card", "Delete Credit Card", "Delete Account"]
     choice = st.selectbox("Select Option", menu)
 
     # -------------------- YOUR CREDIT CARDS --------------------
@@ -151,21 +168,25 @@ elif st.session_state.page == "main":
         if len(user_cards) == 0:
             st.info("No cards saved yet. Please add a new credit card.")
         else:
+            cols = st.columns(2)
             for idx, card in enumerate(user_cards):
-                st.markdown(f"**Card {idx+1}: {card['owner_name']}**")
-                st.write(f"Number: {card['number']}")
-                st.write(f"Expiration: {card['month']}/{card['year']}")
-                st.write(f"CVV: {card['cvv']}")
-                st.write(f"Type: {get_card_type(card['number'])}")
-                valid = "✅ Valid" if luhn_check(card['number']) else "❌ Invalid"
-                st.write(f"Luhn Check: {valid}")
-                st.markdown("---")
+                col = cols[idx % 2]
+                with col:
+                    st.markdown(f"""
+                    <div style='background-color:#D6EAF8; padding:15px; border-radius:10px; margin-bottom:10px;'>
+                        <h4>{card['owner_name']}</h4>
+                        <p>**** **** **** {card['number'][-4:]}</p>
+                        <p>Exp: {card['month']}/{card['year']}</p>
+                        <p>Type: {get_card_type(card['number'])}</p>
+                        <p>Luhn: {"✅ Valid" if luhn_check(card['number']) else "❌ Invalid"}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
     # -------------------- ADD NEW CREDIT CARD --------------------
     elif choice == "Add New Credit Card":
         st.subheader("Add a New Credit Card")
         owner_name = st.text_input("Owner Name / Card Nickname")
-        card_number = st.text_input("Card Number").replace(" ", "").replace("-", "")
+        card_number = st.text_input("Card Number").replace(" ","").replace("-","")
         month = st.text_input("Expiration Month (MM)")
         year = st.text_input("Expiration Year (YYYY)")
         cvv = st.text_input("CVV", type="password")
@@ -207,8 +228,4 @@ elif st.session_state.page == "main":
             if st.button("Delete Card"):
                 if not st.session_state.guest:
                     idx = options.index(to_delete)
-                    del data["users"][st.session_state.username]["cards"][idx]
-                    save_data(data)
-                    st.success("Card deleted successfully!")
-                else:
-                    st.info("Guest mode: no cards saved, nothing to delete.")
+                    del data["users"][st.session_state.username]["cards"][
