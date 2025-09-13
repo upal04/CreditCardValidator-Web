@@ -60,21 +60,26 @@ def page_auth():
         new_username = st.text_input("New Username", key="reg_user")
         new_password = st.text_input("New Password", type="password", key="reg_pass")
         if st.button("Register"):
-            conn = sqlite3.connect("cards.db")
-            c = conn.cursor()
-            try:
-                c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                          (new_username, hash_password(new_password)))
-                conn.commit()
-                st.success("Account created! Please log in.")
-            except sqlite3.IntegrityError:
-                st.error("Username already exists")
-            conn.close()
+            if not new_username.strip() or not new_password.strip():
+                st.error("Username and Password cannot be empty!")
+            else:
+                conn = sqlite3.connect("cards.db")
+                c = conn.cursor()
+                try:
+                    c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
+                              (new_username.strip(), hash_password(new_password.strip())))
+                    conn.commit()
+                    st.success("Account created! Please log in.")
+                except sqlite3.IntegrityError:
+                    st.error("Username already exists")
+                conn.close()
 
     # GUEST
     with tab_guest:
         if st.button("Continue as Guest"):
             st.session_state.user = {"id": None, "username": "Guest"}
+            if "guest_cards" not in st.session_state:
+                st.session_state.guest_cards = []  # store guest cards in session only
             st.success("Guest mode enabled")
             st.rerun()
 
@@ -91,8 +96,15 @@ def page_dashboard():
         cvv = st.text_input("CVV", type="password")
 
         if st.button("Save Card"):
-            if st.session_state.user["id"] is None:
-                st.error("Guests cannot save cards. Please register or login.")
+            if st.session_state.user["id"] is None:  # Guest mode → session only
+                st.session_state.guest_cards.append({
+                    "id": len(st.session_state.guest_cards) + 1,
+                    "card_number": card_number,
+                    "card_name": card_name,
+                    "expiry": expiry,
+                    "cvv": cvv
+                })
+                st.success("Card saved (Guest Mode, not permanent).")
             else:
                 conn = sqlite3.connect("cards.db")
                 c = conn.cursor()
@@ -104,8 +116,12 @@ def page_dashboard():
 
     # VIEW CARDS
     elif choice == "View Cards":
-        if st.session_state.user["id"] is None:
-            st.warning("Guests cannot view cards. Please register or login.")
+        if st.session_state.user["id"] is None:  # Guest mode
+            if st.session_state.guest_cards:
+                for row in st.session_state.guest_cards:
+                    st.write(f"**Card ID:** {row['id']} | **Number:** {row['card_number']} | **Name:** {row['card_name']} | **Expiry:** {row['expiry']}")
+            else:
+                st.info("No guest cards found.")
         else:
             conn = sqlite3.connect("cards.db")
             c = conn.cursor()
@@ -113,7 +129,6 @@ def page_dashboard():
                       (st.session_state.user["id"],))
             rows = c.fetchall()
             conn.close()
-
             if rows:
                 for row in rows:
                     st.write(f"**Card ID:** {row[0]} | **Number:** {row[1]} | **Name:** {row[2]} | **Expiry:** {row[3]}")
@@ -122,11 +137,17 @@ def page_dashboard():
 
     # DELETE CARD
     elif choice == "Delete Card":
-        if st.session_state.user["id"] is None:
-            st.warning("Guests cannot delete cards. Please register or login.")
-        else:
-            card_id = st.number_input("Enter Card ID to delete", min_value=1, step=1)
-            if st.button("Delete Card"):
+        card_id = st.number_input("Enter Card ID to delete", min_value=1, step=1)
+        if st.button("Delete Card"):
+            if st.session_state.user["id"] is None:  # Guest mode
+                before = len(st.session_state.guest_cards)
+                st.session_state.guest_cards = [c for c in st.session_state.guest_cards if c["id"] != card_id]
+                after = len(st.session_state.guest_cards)
+                if before == after:
+                    st.error(f"No guest card with ID {card_id}")
+                else:
+                    st.success(f"Guest card {card_id} deleted.")
+            else:
                 conn = sqlite3.connect("cards.db")
                 c = conn.cursor()
                 c.execute("DELETE FROM cards WHERE id=? AND user_id=?", (card_id, st.session_state.user["id"]))
