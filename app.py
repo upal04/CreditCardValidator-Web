@@ -106,7 +106,7 @@ else:
         st.subheader("➕ Add a New Card")
         holder = st.text_input("Cardholder Name")
         number = st.text_input("Card Number ", placeholder="1234 5678 9012 3456").replace(" ", "").replace("-", "")
-        expiry = st.text_input("Expiry (MM/YY)")
+        expiry = st.text_input("Expiry (MM/YY)", placeholder="04/2004")
         cvv = st.text_input("CVV", type="password")
 
         if st.button("Save Card"):
@@ -155,7 +155,7 @@ else:
                             if validate_card(card['expiry']):
                                 st.success("Card is valid")
                             else:
-                                st.error("Card has expired!")
+                                st.error("Invalid Card: Your Credit Card has expired!")
             
                     with col3:
                         if st.button("🗑️ Delete", key=f"delete_{card['id']}"):
