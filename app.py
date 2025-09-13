@@ -1,191 +1,153 @@
 import streamlit as st
-import sqlite3
-import hashlib
+import json
+import os
 
-# ============== DATABASE ==============
-def init_db():
-    conn = sqlite3.connect("cards.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT
-        )
-    """)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS cards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            card_number TEXT,
-            card_name TEXT,
-            expiry TEXT,
-            cvv TEXT,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )
-    """)
-    conn.commit()
-    conn.close()
+# -------------------- File Path --------------------
+USER_DATA_FILE = "users.json"
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# -------------------- Helper Functions --------------------
+def load_users():
+    if os.path.exists(USER_DATA_FILE):
+        with open(USER_DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
 
-def verify_password(password, hashed):
-    return hash_password(password) == hashed
+def save_users(users):
+    with open(USER_DATA_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
-# ============== AUTH ==============
-def page_auth():
-    st.title("🔐 Login / Register / Guest")
-    tab_login, tab_register, tab_guest = st.tabs(["Login", "Register", "Guest"])
+def validate_card_number(card_number: str) -> bool:
+    """Check if a card number is valid using Luhn Algorithm"""
+    digits = [int(d) for d in card_number if d.isdigit()]
+    checksum = 0
+    reverse_digits = digits[::-1]
+    for i, d in enumerate(reverse_digits):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        checksum += d
+    return checksum % 10 == 0
 
-    # LOGIN
-    with tab_login:
-        username = st.text_input("Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pass")
+# -------------------- Streamlit App --------------------
+st.title("💳 Card Manager App")
+
+users = load_users()
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.username = None
+    st.session_state.guest = False
+
+# -------------------- Login/Register/Guest --------------------
+if not st.session_state.logged_in and not st.session_state.guest:
+    option = st.radio("Choose an option:", ["Login", "Register", "Continue as Guest"])
+
+    if option == "Login":
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
         if st.button("Login"):
-            conn = sqlite3.connect("cards.db")
-            c = conn.cursor()
-            c.execute("SELECT id, password FROM users WHERE username=?", (username,))
-            row = c.fetchone()
-            conn.close()
-            if row and verify_password(password, row[1]):
-                st.session_state.user = {"id": row[0], "username": username}
-                st.success("Logged in successfully!")
-                st.rerun()
+            if username in users and users[username]["password"] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success(f"Welcome back, {username}!")
             else:
-                st.error("Invalid username or password")
+                st.error("Invalid username or password.")
 
-    # REGISTER
-    with tab_register:
-        new_username = st.text_input("New Username", key="reg_user")
-        new_password = st.text_input("New Password", type="password", key="reg_pass")
+    elif option == "Register":
+        username = st.text_input("Choose Username")
+        password = st.text_input("Choose Password", type="password")
         if st.button("Register"):
-            if not new_username.strip() or not new_password.strip():
-                st.error("Username and Password cannot be empty!")
+            if not username or not password:
+                st.warning("⚠️ Username and Password cannot be empty.")
+            elif username in users:
+                st.warning("Username already exists.")
             else:
-                conn = sqlite3.connect("cards.db")
-                c = conn.cursor()
-                try:
-                    c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                              (new_username.strip(), hash_password(new_password.strip())))
-                    conn.commit()
-                    st.success("Account created! Please log in.")
-                except sqlite3.IntegrityError:
-                    st.error("Username already exists")
-                conn.close()
+                users[username] = {"password": password, "cards": []}
+                save_users(users)
+                st.success("Account created successfully! Please login.")
 
-    # GUEST
-    with tab_guest:
-        if st.button("Continue as Guest"):
-            st.session_state.user = {"id": None, "username": "Guest"}
-            if "guest_cards" not in st.session_state:
-                st.session_state.guest_cards = []  # store guest cards in session only
-            st.success("Guest mode enabled")
-            st.rerun()
+    elif option == "Continue as Guest":
+        st.session_state.guest = True
+        st.success("You are using Guest mode. 🚫 Cards cannot be saved.")
 
-# ============== CARD MANAGER ==============
-def page_dashboard():
-    st.title(f"💳 Credit Card Manager ({st.session_state.user['username']})")
-    choice = st.sidebar.radio("Menu", ["Add Card", "View Cards", "Delete Card", "Account Settings", "Logout"])
+# -------------------- Guest Mode --------------------
+elif st.session_state.guest:
+    st.header("Guest Mode (Read-Only)")
+    st.info("Guests cannot save or view cards. Please register or login.")
+    if st.button("🔙 Logout"):
+        st.session_state.guest = False
 
-    # ADD CARD
-    if choice == "Add Card":
+# -------------------- Logged-In Users --------------------
+elif st.session_state.logged_in:
+    st.sidebar.title(f"👋 Hello, {st.session_state.username}")
+    menu = st.sidebar.radio("Menu", ["Add New Card", "View Cards", "Delete Card", "Delete Account", "Logout"])
+
+    # Add New Card
+    if menu == "Add New Card":
+        st.subheader("➕ Add New Card")
         card_number = st.text_input("Card Number")
-        card_name = st.text_input("Card Holder Name")
-        expiry = st.text_input("Expiry Date (MM/YY)")
+        expiry_date = st.text_input("Expiry Date (MM/YY)")
         cvv = st.text_input("CVV", type="password")
+        holder = st.text_input("Cardholder Name")
 
         if st.button("Save Card"):
-            if st.session_state.user["id"] is None:  # Guest mode → session only
-                st.session_state.guest_cards.append({
-                    "id": len(st.session_state.guest_cards) + 1,
-                    "card_number": card_number,
-                    "card_name": card_name,
-                    "expiry": expiry,
-                    "cvv": cvv
-                })
-                st.success("Card saved (Guest Mode, not permanent).")
+            if not card_number or not expiry_date or not cvv or not holder:
+                st.warning("⚠️ All fields are required.")
             else:
-                conn = sqlite3.connect("cards.db")
-                c = conn.cursor()
-                c.execute("INSERT INTO cards (user_id, card_number, card_name, expiry, cvv) VALUES (?, ?, ?, ?, ?)",
-                          (st.session_state.user["id"], card_number, card_name, expiry, cvv))
-                conn.commit()
-                conn.close()
+                valid_status = "✅ Valid" if validate_card_number(card_number) else "❌ Invalid"
+                card = {
+                    "number": card_number,
+                    "expiry": expiry_date,
+                    "cvv": cvv,
+                    "holder": holder,
+                    "status": valid_status
+                }
+                users[st.session_state.username]["cards"].append(card)
+                save_users(users)
                 st.success("Card saved successfully!")
 
-    # VIEW CARDS
-    elif choice == "View Cards":
-        if st.session_state.user["id"] is None:  # Guest mode
-            if st.session_state.guest_cards:
-                for row in st.session_state.guest_cards:
-                    st.write(f"**Card ID:** {row['id']} | **Number:** {row['card_number']} | **Name:** {row['card_name']} | **Expiry:** {row['expiry']}")
-            else:
-                st.info("No guest cards found.")
+    # View Cards
+    elif menu == "View Cards":
+        st.subheader("📋 Your Cards")
+        cards = users[st.session_state.username]["cards"]
+        if not cards:
+            st.info("No cards saved yet.")
         else:
-            conn = sqlite3.connect("cards.db")
-            c = conn.cursor()
-            c.execute("SELECT id, card_number, card_name, expiry FROM cards WHERE user_id=?",
-                      (st.session_state.user["id"],))
-            rows = c.fetchall()
-            conn.close()
-            if rows:
-                for row in rows:
-                    st.write(f"**Card ID:** {row[0]} | **Number:** {row[1]} | **Name:** {row[2]} | **Expiry:** {row[3]}")
-            else:
-                st.info("No cards found.")
+            for i, card in enumerate(cards, 1):
+                st.write(f"### Card {i}")
+                st.write(f"**Cardholder:** {card['holder']}")
+                st.write(f"**Number:** {card['number']}")
+                st.write(f"**Expiry:** {card['expiry']}")
+                st.write(f"**CVV:** {card['cvv']}")
+                st.write(f"**Status:** {card['status']}")
+                st.markdown("---")
 
-    # DELETE CARD
-    elif choice == "Delete Card":
-        card_id = st.number_input("Enter Card ID to delete", min_value=1, step=1)
-        if st.button("Delete Card"):
-            if st.session_state.user["id"] is None:  # Guest mode
-                before = len(st.session_state.guest_cards)
-                st.session_state.guest_cards = [c for c in st.session_state.guest_cards if c["id"] != card_id]
-                after = len(st.session_state.guest_cards)
-                if before == after:
-                    st.error(f"No guest card with ID {card_id}")
-                else:
-                    st.success(f"Guest card {card_id} deleted.")
-            else:
-                conn = sqlite3.connect("cards.db")
-                c = conn.cursor()
-                c.execute("DELETE FROM cards WHERE id=? AND user_id=?", (card_id, st.session_state.user["id"]))
-                conn.commit()
-                conn.close()
-                st.success(f"Card {card_id} deleted successfully!")
-
-    # ACCOUNT SETTINGS
-    elif choice == "Account Settings":
-        if st.session_state.user["id"] is None:
-            st.warning("Guests do not have account settings.")
+    # Delete Card
+    elif menu == "Delete Card":
+        st.subheader("🗑️ Delete a Card")
+        cards = users[st.session_state.username]["cards"]
+        if not cards:
+            st.info("No cards available to delete.")
         else:
-            if st.button("Delete Account ❌"):
-                conn = sqlite3.connect("cards.db")
-                c = conn.cursor()
-                c.execute("DELETE FROM users WHERE id=?", (st.session_state.user["id"],))
-                c.execute("DELETE FROM cards WHERE user_id=?", (st.session_state.user["id"],))
-                conn.commit()
-                conn.close()
-                st.success("Account deleted permanently.")
-                st.session_state.user = None
-                st.rerun()
+            card_index = st.selectbox("Select a card to delete", range(len(cards)))
+            if st.button("Delete Selected Card"):
+                removed = users[st.session_state.username]["cards"].pop(card_index)
+                save_users(users)
+                st.success(f"Deleted card: {removed['number']}")
 
-    # LOGOUT
-    elif choice == "Logout":
-        st.session_state.user = None
+    # Delete Account
+    elif menu == "Delete Account":
+        st.subheader("⚠️ Delete Account")
+        if st.button("Delete My Account"):
+            del users[st.session_state.username]
+            save_users(users)
+            st.session_state.logged_in = False
+            st.session_state.username = None
+            st.success("Account deleted successfully.")
+
+    # Logout
+    elif menu == "Logout":
+        st.session_state.logged_in = False
+        st.session_state.username = None
         st.success("Logged out successfully.")
-        st.rerun()
-
-# ============== MAIN ==============
-def main():
-    st.set_page_config(page_title="Credit Card Manager", page_icon="💳", layout="centered")
-    init_db()
-
-    if "user" not in st.session_state or st.session_state.user is None:
-        page_auth()
-    else:
-        page_dashboard()
-
-if __name__ == "__main__":
-    main()
