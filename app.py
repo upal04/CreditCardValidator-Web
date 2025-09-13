@@ -30,18 +30,18 @@ def luhn_check(card_number):
         checksum += d
     return checksum % 10 == 0
 
-# Detect card type
+# Detect card type + logo
 def get_card_type(number):
     if number.startswith("4"):
-        return "Visa"
+        return "Visa", "https://img.icons8.com/color/96/000000/visa.png"
     elif number.startswith(("51", "52", "53", "54", "55")):
-        return "MasterCard"
+        return "MasterCard", "https://img.icons8.com/color/96/000000/mastercard.png"
     elif number.startswith(("34", "37")):
-        return "American Express"
+        return "American Express", "https://img.icons8.com/color/96/000000/amex.png"
     elif number.startswith("6"):
-        return "Discover"
+        return "Discover", "https://img.icons8.com/color/96/000000/discover.png"
     else:
-        return "Unknown"
+        return "Unknown", "https://img.icons8.com/ios-filled/100/credit-card.png"
 
 # Expiry check
 def check_expiry(month, year):
@@ -69,33 +69,61 @@ if choice == "📂 Your Credit Cards":
     if not cards:
         st.info("📭 Empty Folder! Please add your credit card.")
     else:
-        cols = st.columns(2)
         for idx, card in enumerate(cards):
-            with cols[idx % 2]:
-                card_type = get_card_type(card["number"])
-                masked_number = "**** **** **** " + card["number"][-4:]
-                status = check_expiry(card["month"], card["year"])
+            card_type, logo_url = get_card_type(card["number"])
+            masked_number = "**** **** **** " + card["number"][-4:]
+            status = check_expiry(card["month"], card["year"])
 
-                # Card color based on status
-                if status == "Expired":
-                    color = "#FF4B4B"
-                elif status == "Expiring Soon":
-                    color = "#FFA500"
-                else:
-                    color = "#4CAF50"
+            # Card color based on status
+            if status == "Expired":
+                color = "#FF4B4B"
+            elif status == "Expiring Soon":
+                color = "#FFA500"
+            else:
+                color = "#4CAF50"
 
-                st.markdown(
-                    f"""
-                    <div style="background:{color};padding:20px;border-radius:15px;color:white;margin-bottom:15px;">
+            st.markdown(
+                f"""
+                <div style="background:{color};
+                            padding:20px;
+                            border-radius:15px;
+                            color:white;
+                            margin-bottom:15px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
                         <h3>{card_type}</h3>
-                        <p><b>{masked_number}</b></p>
-                        <p>Owner: {card["name"]}</p>
-                        <p>Expiry: {card["month"]}/{card["year"]}</p>
-                        <p>Status: <b>{status}</b></p>
+                        <img src="{logo_url}" width="60">
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                    <p><b>{masked_number}</b></p>
+                    <p>Owner: {card["name"]}</p>
+                    <p>Expiry: {card["month"]}/{card["year"]}</p>
+                    <p>Status: <b>{status}</b></p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button(f"🔍 See Full Details ({card['name']})", key=f"details_{idx}"):
+                    st.info(
+                        f"""
+                        **Full Details**  
+                        👤 Name: {card['name']}  
+                        💳 Number: {card['number']}  
+                        📅 Expiry: {card['month']}/{card['year']}  
+                        🔒 CVV: {card['cvv']}  
+                        """
+                    )
+            with col2:
+                if st.button(f"✅ Validation Check ({card['name']})", key=f"validate_{idx}"):
+                    if not luhn_check(card["number"]):
+                        st.error("❌ Invalid credit card number (failed Luhn check)")
+                    elif status == "Expired":
+                        st.error("❌ Card has expired")
+                    else:
+                        st.success(f"✅ Card is valid and active!")
+
+            st.markdown("---")
 
 # ---- Add New Card ----
 elif choice == "➕ Add New Credit Card":
