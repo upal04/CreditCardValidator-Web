@@ -144,9 +144,9 @@ else:
                     with col1:
                         if st.button("Show Full Details", key=f"details_{card['id']}"):
                             st.info(
-                                f"Holder: {card['holder']}"
-                                f"\nNumber: {format_number(card['number'])}"
-                                f"\nExpiry: {card['expiry']}"
+                                f"Holder: {card['holder']} \n"
+                                f"\nNumber: {format_number(card['number'])} \n"
+                                f"\nExpiry: {card['expiry']} \n"
                                 f"\nCVV: {card['cvv']}"
                             )
 
