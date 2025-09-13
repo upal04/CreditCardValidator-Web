@@ -43,6 +43,7 @@ def get_card_type(number):
 # -------------------- SESSION STATE --------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
     st.session_state.username = ""
 if "guest" not in st.session_state:
     st.session_state.guest = False
@@ -50,18 +51,16 @@ if "page" not in st.session_state:
     st.session_state.page = "home"
 
 # -------------------- AUTH FUNCTIONS --------------------
-def register(username, password):
+def register_user(username, password):
     data = load_data()
     if username in data["users"]:
         st.error("Username already exists!")
-        return False
+        return
     data["users"][username] = {"password": password, "cards": []}
     save_data(data)
     st.success("Registered successfully! You can now login.")
-    st.session_state.page = "home"
-    st.experimental_rerun()
 
-def login(username, password):
+def login_user(username, password):
     data = load_data()
     if username in data["users"] and data["users"][username]["password"] == password:
         st.session_state.logged_in = True
@@ -107,36 +106,19 @@ st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layo
 if st.session_state.page == "home":
     st.markdown("<h1 style='text-align:center;color:#2E86C1;'>💳 Credit Card Manager</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align:center;color:#1F618D;'>Select an option to continue</h3>", unsafe_allow_html=True)
-    
-    st.markdown("""
-        <style>
-        .big-button {
-            display:block;
-            width:60%;
-            margin:auto;
-            font-size:24px;
-            background-color:#1F618D;
-            color:white;
-            padding:15px 0px;
-            border-radius:10px;
-            margin-bottom:15px;
-            text-align:center;
-        }
-        .big-button:hover {
-            background-color:#2874A6;
-            color:white;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
-    if st.button("Login", key="login_btn"):
-        st.session_state.page = "login"
-        st.experimental_rerun()
-    if st.button("Register", key="reg_btn"):
-        st.session_state.page = "register"
-        st.experimental_rerun()
-    if st.button("Guest", key="guest_btn"):
-        guest_login()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Login"):
+            st.session_state.page = "login"
+            st.experimental_rerun()
+    with col2:
+        if st.button("Register"):
+            st.session_state.page = "register"
+            st.experimental_rerun()
+    with col3:
+        if st.button("Guest"):
+            guest_login()
 
 # -------------------- LOGIN PAGE --------------------
 elif st.session_state.page == "login":
@@ -146,7 +128,7 @@ elif st.session_state.page == "login":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Login"):
-            login(username, password)
+            login_user(username, password)
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
@@ -160,7 +142,7 @@ elif st.session_state.page == "register":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Register"):
-            register(username, password)
+            register_user(username, password)
     with col2:
         if st.button("Back"):
             st.session_state.page = "home"
@@ -172,15 +154,12 @@ elif st.session_state.page == "main":
     if st.sidebar.button("Logout"):
         logout()
     
-    # Load user cards
     data = load_data()
     if not st.session_state.guest:
-        user_data = data["users"].get(st.session_state.username, {})
-        user_cards = user_data.get("cards", [])
+        user_cards = data["users"].get(st.session_state.username, {}).get("cards", [])
     else:
         user_cards = []
 
-    # Menu options
     menu = ["Your Credit Cards", "Add New Credit Card", "Delete Credit Card", "Delete Account"]
     choice = st.selectbox("Select Option", menu)
 
