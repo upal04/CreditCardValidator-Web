@@ -2,25 +2,32 @@
 import streamlit as st
 import datetime
 import uuid
-
-def format_number(number):
-    """Format card number in XXXX XXXX XXXX XXXX style"""
-    return " ".join([number[i:i+4] for i in range(0, len(number), 4)])
-
-st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
+import json
+import os
 
 # -------------------------
-# Session Storage
+# File Storage Functions
 # -------------------------
-if "users" not in st.session_state:
-    st.session_state["users"] = {}
-if "current_user" not in st.session_state:
-    st.session_state["current_user"] = None
+DATA_FILE = "users.json"
 
+def save_data():
+    with open(DATA_FILE, "w") as f:
+        json.dump(st.session_state["users"], f)
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            st.session_state["users"] = json.load(f)
+    else:
+        st.session_state["users"] = {}
 
 # -------------------------
 # Helper Functions
 # -------------------------
+def format_number(number):
+    """Format card number in XXXX XXXX XXXX XXXX style"""
+    return " ".join([number[i:i+4] for i in range(0, len(number), 4)])
+
 def validate_card(expiry):
     """Check if a card is expired (MM/YY)."""
     try:
@@ -33,11 +40,9 @@ def validate_card(expiry):
     except:
         return False
 
-
 def mask_number(number):
     """Show only last 4 digits."""
     return "**** **** **** " + number[-4:]
-
 
 # -------------------------
 # Auth Functions
@@ -46,13 +51,23 @@ def login(username, password):
     users = st.session_state["users"]
     return username in users and users[username]["password"] == password
 
-
 def register(username, password):
     if username in st.session_state["users"]:
         return False
     st.session_state["users"][username] = {"password": password, "cards": []}
+    save_data()
     return True
 
+# -------------------------
+# App Config
+# -------------------------
+st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
+
+# Load users data from file (first run only)
+if "users" not in st.session_state:
+    load_data()
+if "current_user" not in st.session_state:
+    st.session_state["current_user"] = None
 
 # -------------------------
 # Interface
@@ -125,6 +140,7 @@ else:
                     "cvv": cvv,
                 }
                 st.session_state["users"][user]["cards"].append(card)
+                save_data()
                 st.success("Card saved!")
 
     # ------------------ See Cards ------------------
@@ -159,7 +175,8 @@ else:
             
                     with col3:
                         if st.button("🗑️ Delete", key=f"delete_{card['id']}"):
-                            st.session_state.users[st.session_state.current_user]["cards"].remove(card)
+                            st.session_state["users"][user]["cards"].remove(card)
+                            save_data()
                             st.success("Card deleted")
                             st.rerun()
 
@@ -171,6 +188,7 @@ else:
             if st.button("Delete My Account"):
                 st.session_state["users"].pop(user, None)
                 st.session_state["current_user"] = None
+                save_data()
                 st.success("Your account has been deleted.")
                 st.rerun()
 
@@ -181,5 +199,5 @@ else:
         st.rerun()
     
     # Show card count in sidebar
-    card_count = len(st.session_state.users[user]["cards"])
+    card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
