@@ -13,8 +13,7 @@ DATA_FILE = os.path.join(APP_DIR, "users.json")       # users.json always saved 
 
 def save_data():
     with open(DATA_FILE, "w") as f:
-        json.dump(st.session_state["users"], f, indent=4)
-    st.success(f"✅ Data saved to: {DATA_FILE}")
+        json.dump(st.session_state["users"], f, indent=4)  # pretty format for readability
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -199,9 +198,25 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
+
+    # ------------------ Developer Only: Export Users Data ------------------
+    st.sidebar.markdown("---")  # divider
+
+    dev_key = st.sidebar.text_input("🔑 Developer Key", type="password")
+
+    if dev_key == "my-secret-key-123":  # change this to your own secret key
+        st.sidebar.success("Developer mode enabled ✅")
+
+        data_str = json.dumps(st.session_state["users"], indent=4)
+
+        st.sidebar.download_button(
+            label="⬇️ Download All Users Data",
+            data=data_str,
+            file_name="users.json",
+            mime="application/json"
+        )
+
     
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
-
-
