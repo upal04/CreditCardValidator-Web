@@ -6,8 +6,7 @@ import json
 import os
 
 # File Storage Functions
-APP_DIR = os.path.dirname(os.path.abspath(__file__))   # folder where app.py lives
-DATA_FILE = os.path.join(APP_DIR, "users.json")       # users.json always saved here
+DATA_FILE = r"C:\Users\upalp\Desktop\Credit_Card Validator\users.json"
 
 # DEBUG: Show where JSON will be saved
 st.sidebar.info(f"🔍 Data file path: {DATA_FILE}")
@@ -230,4 +229,5 @@ else:
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
+
 
