@@ -6,14 +6,18 @@ import json
 import os
 
 # File Storage Functions
-DATA_FILE = r"C:\Users\upalp\Desktop\Credit_Card Validator\users.json"
+DATA_FILE = r"C:\Users\upalp\Desktop\users.json"
 
 # DEBUG: Show where JSON will be saved
 st.sidebar.info(f"🔍 Data file path: {DATA_FILE}")
 
 def save_data():
-    with open(DATA_FILE, "w") as f:
-        json.dump(st.session_state["users"], f, indent=4)  # pretty format for readability
+    try:
+        with open(DATA_FILE, "w") as f:
+            json.dump(st.session_state["users"], f, indent=4)
+        st.sidebar.success(f"✅ Data saved to {DATA_FILE}")
+    except Exception as e:
+        st.sidebar.error(f"❌ Error saving file: {e}")
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -229,5 +233,6 @@ else:
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
+
 
 
