@@ -79,10 +79,10 @@ st.markdown(
 )
 
 # -------------------------
-# If not logged in → show login/register
+# If not logged in → show login/register/settings
 # -------------------------
 if not st.session_state["current_user"]:
-    tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
+    tab1, tab2, tab3 = st.tabs(["🔑 Login", "📝 Register", "⚙️ Settings"])
 
     with tab1:
         st.subheader("Login to your account")
@@ -107,6 +107,42 @@ if not st.session_state["current_user"]:
                 st.success("Account created! You can login now.")
             else:
                 st.error("Username already exists.")
+
+    # -------------------------
+    # Developer Settings (Admin Dashboard)
+    # -------------------------
+    with tab3:
+        st.subheader("👨‍💻 Developer Dashboard")
+        dev_key = st.text_input("🔑 Enter Developer Key", type="password")
+
+        if dev_key == "upal-dev-2025":  # change this to your secret key
+            st.success("✅ Developer mode enabled")
+
+            users_data = st.session_state["users"]
+
+            # Show total users
+            st.info(f"📊 Total Accounts: {len(users_data)}")
+
+            # Summary table
+            st.write("### 📋 Accounts Summary")
+            for uname, details in users_data.items():
+                st.write(f"- **{uname}** → {len(details['cards'])} card(s)")
+
+            st.write("---")
+
+            # Loop through all users with expanders
+            for uname, details in users_data.items():
+                with st.expander(f"👤 User: {uname}  |  Cards: {len(details['cards'])}"):
+                    st.write("**Password (stored):**", details["password"])  # ⚠️ For dev only
+                    st.write("**Total Cards:**", len(details["cards"]))
+
+                    # List all cards
+                    for i, card in enumerate(details["cards"], start=1):
+                        st.write(f"--- Card {i} ---")
+                        st.write("Holder:", card["holder"])
+                        st.write("Number:", format_number(card["number"]))
+                        st.write("Expiry:", card["expiry"])
+                        st.write("CVV:", card["cvv"])
 
 # -------------------------
 # If logged in → dashboard
@@ -198,37 +234,7 @@ else:
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
         st.rerun()
-        
-    # ------------------ Developer Only: Admin Dashboard ------------------
-    st.sidebar.markdown("---")  # divider
-
-    dev_key = st.sidebar.text_input("🔑 Developer Key", type="password")
-
-    if dev_key == "upal-dev-2025":  # change this to your secret key
-        st.sidebar.success("Developer mode enabled ✅")
-
-        st.subheader("👨‍💻 Developer Dashboard")
-
-        users_data = st.session_state["users"]
-
-        # Show total users
-        st.info(f"📊 Total Accounts: {len(users_data)}")
-
-        # Loop through all users
-        for uname, details in users_data.items():
-            with st.expander(f"👤 User: {uname}  |  Cards: {len(details['cards'])}"):
-                st.write("**Password (stored):**", details["password"])  # ⚠️ For dev only
-                st.write("**Total Cards:**", len(details["cards"]))
-
-                # List all cards
-                for i, card in enumerate(details["cards"], start=1):
-                    st.write(f"--- Card {i} ---")
-                    st.write("Holder:", card["holder"])
-                    st.write("Number:", format_number(card["number"]))
-                    st.write("Expiry:", card["expiry"])
-                    st.write("CVV:", card["cvv"])
 
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
-
