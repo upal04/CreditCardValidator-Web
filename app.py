@@ -9,6 +9,9 @@ import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))   # folder where app.py lives
 DATA_FILE = os.path.join(APP_DIR, "users.json")       # users.json always saved here
 
+# DEBUG: Show where JSON will be saved
+st.sidebar.info(f"🔍 Data file path: {DATA_FILE}")
+
 def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(st.session_state["users"], f, indent=4)  # pretty format for readability
@@ -61,6 +64,11 @@ if "users" not in st.session_state:
     load_data()
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
+
+# Debug Save Button
+if st.sidebar.button("💾 Force Save JSON (Debug)"):
+    save_data()
+    st.sidebar.success("Data manually saved!")
 
 # Interface
 st.markdown(
@@ -222,3 +230,4 @@ else:
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
+
