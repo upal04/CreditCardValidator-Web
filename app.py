@@ -13,7 +13,8 @@ DATA_FILE = os.path.join(APP_DIR, "users.json")       # users.json always saved 
 
 def save_data():
     with open(DATA_FILE, "w") as f:
-        json.dump(st.session_state["users"], f, indent=4)  # pretty format for readability
+        json.dump(st.session_state["users"], f, indent=4)
+    st.success(f"✅ Data saved to: {DATA_FILE}")
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -202,4 +203,5 @@ else:
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
+
 
