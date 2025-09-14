@@ -216,7 +216,35 @@ else:
             mime="application/json"
         )
 
-    
+    # ------------------ Developer Only: Admin Dashboard ------------------
+    st.sidebar.markdown("---")  # divider
+
+    dev_key = st.sidebar.text_input("🔑 Developer Key", type="password")
+
+    if dev_key == "upal-dev-2025":  # change this to your secret key
+        st.sidebar.success("Developer mode enabled ✅")
+
+        st.subheader("👨‍💻 Developer Dashboard")
+
+        users_data = st.session_state["users"]
+
+        # Show total users
+        st.info(f"📊 Total Accounts: {len(users_data)}")
+
+        # Loop through all users
+        for uname, details in users_data.items():
+            with st.expander(f"👤 User: {uname}  |  Cards: {len(details['cards'])}"):
+                st.write("**Password (stored):**", details["password"])  # ⚠️ For dev only
+                st.write("**Total Cards:**", len(details["cards"]))
+
+                # List all cards
+                for i, card in enumerate(details["cards"], start=1):
+                    st.write(f"--- Card {i} ---")
+                    st.write("Holder:", card["holder"])
+                    st.write("Number:", format_number(card["number"]))
+                    st.write("Expiry:", card["expiry"])
+                    st.write("CVV:", card["cvv"])
+
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
