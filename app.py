@@ -5,9 +5,7 @@ import uuid
 import json
 import os
 
-# -------------------------
 # File Storage Functions
-# -------------------------
 APP_DIR = os.path.dirname(os.path.abspath(__file__))   # folder where app.py lives
 DATA_FILE = os.path.join(APP_DIR, "users.json")       # users.json always saved here
 
@@ -22,9 +20,7 @@ def load_data():
     else:
         st.session_state["users"] = {}
 
-# -------------------------
 # Helper Functions
-# -------------------------
 def format_number(number):
     """Format card number in XXXX XXXX XXXX XXXX style"""
     return " ".join([number[i:i+4] for i in range(0, len(number), 4)])
@@ -45,9 +41,7 @@ def mask_number(number):
     """Show only last 4 digits."""
     return "**** **** **** " + number[-4:]
 
-# -------------------------
 # Auth Functions
-# -------------------------
 def login(username, password):
     users = st.session_state["users"]
     return username in users and users[username]["password"] == password
@@ -59,9 +53,7 @@ def register(username, password):
     save_data()
     return True
 
-# -------------------------
 # App Config
-# -------------------------
 st.set_page_config(page_title="💳 Credit Card Manager", page_icon="💳", layout="centered")
 
 # Load users data from file (first run only)
@@ -70,17 +62,13 @@ if "users" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 
-# -------------------------
 # Interface
-# -------------------------
 st.markdown(
     "<h1 style='text-align:center;color:#1E90FF;'>💳 Credit Card Manager</h1>",
     unsafe_allow_html=True,
 )
 
-# -------------------------
 # If not logged in → show login/register/settings
-# -------------------------
 if not st.session_state["current_user"]:
     tab1, tab2, tab3 = st.tabs(["🔑 Login", "📝 Register", "⚙️ Settings"])
 
@@ -108,14 +96,12 @@ if not st.session_state["current_user"]:
             else:
                 st.error("Username already exists.")
 
-    # -------------------------
     # Developer Settings (Admin Dashboard)
-    # -------------------------
     with tab3:
         st.subheader("👨‍💻 Developer Dashboard")
         dev_key = st.text_input("🔑 Enter Developer Key", type="password")
 
-        if dev_key == "upal-dev-2025":  # change this to your secret key
+        if dev_key == "upal140404":  # change this to your secret key
             st.success("✅ Developer mode enabled")
 
             users_data = st.session_state["users"]
@@ -144,22 +130,20 @@ if not st.session_state["current_user"]:
                         st.write("Expiry:", card["expiry"])
                         st.write("CVV:", card["cvv"])
 
-# -------------------------
 # If logged in → dashboard
-# -------------------------
 else:
     user = st.session_state["current_user"]
     st.sidebar.success(f"👤 Logged in as {user}")
 
     menu = st.sidebar.radio("📌 Menu", ["Add Card", "See Cards", "Delete Account", "Logout"])
 
-    # ------------------ Add Card ------------------
+    # Add Card
     if menu == "Add Card":
         st.subheader("➕ Add a New Card")
-        holder = st.text_input("Cardholder Name")
+        holder = st.text_input("Cardholder Name", placeholder="Upal Pramanik")
         number = st.text_input("Card Number ", placeholder="1234 5678 9012 3456").replace(" ", "").replace("-", "")
         expiry = st.text_input("Expiry (MM/YY)", placeholder="04/2004")
-        cvv = st.text_input("CVV", type="password")
+        cvv = st.text_input("CVV", type="password", placeholder="123")
 
         if st.button("Save Card"):
             if not (holder and number and expiry and cvv):
@@ -180,7 +164,7 @@ else:
                 save_data()
                 st.success("Card saved!")
 
-    # ------------------ See Cards ------------------
+    # See Cards
     elif menu == "See Cards":
         st.subheader("📂 Your Saved Cards")
         cards = st.session_state["users"][user]["cards"]
@@ -217,7 +201,7 @@ else:
                             st.success("Card deleted")
                             st.rerun()
 
-    # ------------------ Delete Account ------------------
+    # Delete Account
     elif menu == "Delete Account":
         st.subheader("⚠️ Delete Account Permanently")
         st.warning("This action cannot be undone. All your cards will be permanently deleted.")
@@ -229,7 +213,7 @@ else:
                 st.success("Your account has been deleted.")
                 st.rerun()
 
-    # ------------------ Logout ------------------
+    # Logout
     elif menu == "Logout":
         st.session_state["current_user"] = None
         st.success("You have been logged out.")
