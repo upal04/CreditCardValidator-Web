@@ -190,7 +190,7 @@ else:
                     with col2:
                         if st.button("✅ Check Validity", key=f"validity_{card['id']}"):
                             if validate_card(card['expiry']):
-                                st.success("Card is valid")
+                                st.success("Card is Valid!")
                             else:
                                 st.error("Invalid Card: Your Credit Card has expired!")
             
@@ -222,3 +222,4 @@ else:
     # Show card count in sidebar
     card_count = len(st.session_state["users"][user]["cards"])
     st.sidebar.info(f"📊 You have {card_count} saved card(s)")
+
